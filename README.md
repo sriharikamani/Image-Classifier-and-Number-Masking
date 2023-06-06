@@ -5,4 +5,4 @@ To showcase the capability to classify various image files (such as aadhaar card
 
 The masked aadhara images files are written back to the aadhaar folder.
 
-Run the python script Doc_classifier_aadhaar_numberMask.py at the command prompt 
+Download and store various images files into an folder and change the path. Run the python script Doc_classifier_aadhaar_numberMask.py at the command prompt. 
