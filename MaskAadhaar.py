@@ -8,6 +8,7 @@ import cv2
 import os
 import re
 import pathlib
+
 import pandas as pd
 import warnings
 warnings.filterwarnings("ignore")
@@ -66,6 +67,9 @@ def get_number(image):
             
     except Exception as e:
         adhNumErr = 'Error'
+        adhNum    = 0
+        text      = ''
+        return (adhNum,text,adhNumErr)
 
     text = re.sub(r"[^a-zA-Z0-9]+", ' ', text[0]).strip()
     
@@ -85,29 +89,36 @@ def maskAadhaar(img,words,image,number,type):
     fontScale2  = 0.55
     fontColor   = (0,0,0)
     lineType    = 2
-    temp  = []
-    cords = []
-    text  = pytesseract.image_to_data(img,lang='eng',output_type=Output.DICT)
-
-    # Get the locations of first two words of aadhaar number from the image
-
-    subtext = text['text']
-    n_boxes = len(text['level'])
-    lst_        = []
-        
-    for i in range(len(subtext)):
-
-        if (subtext[i]==words[0]):
-            row      = {'Image':image,'Number':words[0], 'Position':0,'Location':i}      
-            lst_.append(row)
-            temp.append(words[0])
-
-        if (subtext[i]==words[1]):
-            row     = {'Image':image,'Number':words[1], 'Position':1,'Location':i}          
-            lst_.append(row)
-            temp.append(words[1])
+    configOpts  = ['','--psm 6','--psm 4','--psm 11','--psm 12']
     
-    address = pd.DataFrame(lst_, columns=['Image','Number','Position','Location'])
+    for i in range(len(configOpts)):
+        
+        temp  = []
+        cords = []
+        text  = pytesseract.image_to_data(img, lang='eng', config =configOpts[i], output_type=Output.DICT)
+
+        # Get the locations of first two words of aadhaar number from the image
+
+        subtext = text['text']
+        n_boxes = len(text['level'])
+        lst_    = []
+
+        for i in range(len(subtext)):
+
+            if (subtext[i]==words[0]):
+                row      = {'Image':image,'Number':words[0], 'Position':0,'Location':i}      
+                lst_.append(row)
+                temp.append(words[0])
+
+            if (subtext[i]==words[1]):
+                row     = {'Image':image,'Number':words[1], 'Position':1,'Location':i}          
+                lst_.append(row)
+                temp.append(words[1])
+
+        address = pd.DataFrame(lst_, columns=['Image','Number','Position','Location'])
+        
+        if (((type =='S') and (len(address)==2)) or ((type =='L') and (len(address)==4))):
+            break
     
     ###################################################################################################
     # Get the coordinates of the aadhaar number from the image based on the identified address location
@@ -313,27 +324,16 @@ def maskAadhaar(img,words,image,number,type):
 ############
 
 def mask():
-    
-    #new_size = (1500, 2700) # for long
-    #new_size = (310, 200)   # for short
-
-    
+        
     for track in os.scandir(path):
         if track.is_file():
-            img        = cv2.imread(path+track.name)
-            # Resize for samll cards
-            
-            img = cv2.resize(img, (310, 200)) if (track.name[0] == 'S')  else cv2.resize(img, (1300, 2700))
-            
-            #if (track.name[0] == 'S'):
-            #    img    = cv2.resize(img, (310, 200))
-            #else:
-            #    img     = cv2.resize(img, (1500, 2700))
-                
+            img                   = cv2.imread(path+track.name)           
+            img                   = cv2.resize(img, (310, 200)) if (track.name[0] == 'S')  else cv2.resize(img, (1300, 2700))
             adhNum,text,adhNumErr = get_number(track.name)
-            temp       = [text]
-            split_nums = temp[0].split()
-            words      = [(num_str) for num_str in split_nums]
-            cordErr    = maskAadhaar(img,words,track.name,text,'')
+            if (adhNumErr != 'Error'):
+                temp                  = [text]
+                split_nums            = temp[0].split()
+                words                 = [(num_str) for num_str in split_nums]
+                cordErr               = maskAadhaar(img,words,track.name,text,track.name[0])
 
 #mask()
